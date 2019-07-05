@@ -42,6 +42,7 @@ class twitter_crawling:
             for tweets in pool.map(self.crawltweets, urls):
                 tweets = BeautifulSoup(tweets, 'html.parser').find_all('li',{'class': 'js-stream-item stream-item stream-item'})
                 all_tweets.extend(list(filter(None, [self.__parse_tweet(tweet) for tweet in tweets])))
+
         finally:
             pool.close()
             pool.join()
@@ -49,6 +50,7 @@ class twitter_crawling:
         self.__tweetspreprocessing(all_tweets, keyword, since, until)
 
     def crawltweets(self, url):
+        print("Query : {}".format(url))
         twitter = self.__driverget(url)
         self.__scroll(twitter)
         tweet_html = twitter.page_source
@@ -78,6 +80,8 @@ class twitter_crawling:
 
             for dup_num in index:
                 tweets.pop(dup_num)
+
+            print("Get tweets: {}개".format(len(tweets)))
             json.dump(tweets, j, ensure_ascii=False, indent='\t')
 
     def __parse_tweet(self, tweet):
@@ -127,7 +131,3 @@ class twitter_crawling:
         h = (stop - start) / (n - 1)
         for i in range(n):
             yield start + h * i
-
-# if __name__ == '__main__':
-#     tc = twitter_crawling()
-#     tc.search_query("갤럭시S9", dt.date(2018, 10, 1), dt.date(2018, 12, 31), 3)
