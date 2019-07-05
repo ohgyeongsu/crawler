@@ -29,6 +29,7 @@ if __name__ == '__main__':
     tc = crawl_tweet.twitter_crawling()
     # tc.search_query(크롤링할 키워드, 검색시작할날짜, 검색끝나는날짜, poolsize)
     tc.search_query("갤럭시S9", dt.date(2018, 10, 1), dt.date(2018, 12, 31), 3)
+    
 '''
 
 ## 3. 설명
