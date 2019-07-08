@@ -101,6 +101,7 @@ class twitter_crawling:
             return {'fullname': tweet.select_one('div > div > div.stream-item-header > a > span.FullNameGroup > strong').text.strip(),
                     'username': tweet.select_one('div > div > div.stream-item-header > a > span.username').text,
                     'timestamp': str(timestamp)[:-3],
+                    'url': 'https://twitter.com'+tweet.select_one('div')['data-permalink-path'],
                     'tweet': tweet.select_one('div > div > div.js-tweet-text-container > p').text.replace('\n',' ').replace('…','').strip()
                     } # 나중에 이미지나 동영상 추가
 
