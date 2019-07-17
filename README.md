@@ -1,4 +1,4 @@
-# crawler
+# Twitter Crawler
 
 트위터 키워드 기반 크롤링 검색 코드입니다.
 
@@ -10,9 +10,7 @@ selenium의 webdriver를 사용한 동적 크롤링으로 크롬드라이버를 
 
 크롬 드라이버는 현재 githup에 올린 버전을 사용했습니다.
 
-구현 환경은 Anaconda3 5.1.0 64-bit에서 가상환경을 만들어서 Python 3.6.8 버전으로 진행했습니다.
-
-추후에 만들어놓았던 YouTube 댓글 크롤링도 병렬과정을 추가해서 올릴 예정입니다.
+구현 환경은 Windows10, Anaconda3 5.1.0 64-bit에서 가상환경을 만들어서 Python 3.6.8 버전으로 진행했습니다.
 
 # 사용방법
 
@@ -50,11 +48,56 @@ poolsize보다 날짜간의 일수가 작으면 poolsize는 일수로 설정됩�
 
 실행하면 실행한 python파일과 같은 위치에 **키워드(시작날짜~끝날짜).json** 으로 크롤링한 데이터를 json으로 만들어줍니다.
 
-추후에 문제나 추가할 기능을 커밋하겠습니다.
-
 
 ## 4. 참고
 
 https://github.com/taspinar/twitterscraper.git
 
 https://github.com/e9t/nsmc.git
+
+
+
+# YouTube Crawler
+
+유튜브 키워드 기반 크롤링 검색 코드입니다.
+
+selenium의 webdriver를 사용한 크롤링으로 크롬드라이버를 사용했습니다.
+
+병렬 크롤링을 하려했으나 트랙픽이 과도하게 들어가면 구글에서 reCAPTCHA이 작동해서 추가하지 않았습니다.
+
+그렇지만 계속해서 크롤러를 실행할 경우에도 reCAPTCHA 작동하므로 주의깊게 돌리시길 바랍니다.
+
+크롬 드라이버는 현재 githup에 올린 버전을 사용했습니다.
+
+구현 환경은 위의 트위터 크롤러 환경과 같습니다.
+
+# 사용방법
+
+## 1. 사전작업
+
+이미 파이썬 환경이 있으시면 크롬드라이버와 crawl_youtube.py 파일을 같은 위치에 다운받으신 후 새로운 python파일에 아래 코드를 입력합니다.
+
+## 2. 코드
+
+```python
+
+import crawl_youtube
+
+if __name__ == '__main__':
+    test = crawl_youtube.youtube_crawling()
+    #test.video_hard_information("크롤링할 키워드")
+    test.video_hard_information("갤럭시 S9")
+    
+```
+
+## 3. 설명
+
+키워드에는 예제 코드에서 보이듯 원하는 단어를 입력하시면 됩니다.
+
+여러번 테스트해본 결과 selenium에서 maxretryerror이 몇몇 동영상에서 간헐적으로 발생하기 때문에 크롤링시에 이를 기억하고 모든 동영상을 한번씩 확인했으면 문제가 발생한 동영상을 다시 크롤링합니다.
+
+해당 동영상의 채널에 구독자수를 비공개하거나 조회수나 좋아요, 싫어요가 하나도 없거나 댓글을 달지 못하게 해논 동영상의 경우는 0 또는 None, [] 등으로 값을 리턴합니다.
+
+실행하면 실행한 python파일과 같은 위치에 **키워드** 폴더가 생성되고 그 폴더안에 **동영상타이틀_video.json** 으로 json파일을 생성합니다.
+
+추후에 문제나 추가할 기능을 커밋하겠습니다.
