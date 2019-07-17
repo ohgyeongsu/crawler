@@ -266,8 +266,3 @@ class youtube_crawling:
 
         comment_count = len(comments)
         return comment_count, comments
-
-
-if __name__ == '__main__':
-    test = youtube_crawling()
-    test.video_hard_information("갤럭시 S9")
