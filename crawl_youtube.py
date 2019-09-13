@@ -77,20 +77,17 @@ class youtube_crawling:
 
             try:
                 video_view = int(
-                    video.select_one('#dismissable > div > div > div > h3 > a')[
-                        'aria-label'].split('조회수 ')[1][:-1].replace(',', ''))
+                    video.select_one('#dismissable > div > div > div > h3 > a')['aria-label'].split('조회수 ')[1][:-1].replace(',', ''))
             except:
                 video_view = 0
 
             video_url = 'https://www.youtube.com' + \
-                        video.select_one('#dismissable > div > div > div > h3 > a')[
-                            'href']
+                        video.select_one('#dismissable > div > div > div > h3 > a')['href']
 
             channel_name = video.select_one(
-                'div#dismissable > div > div > ytd-video-meta-block > #metadata > #byline-container > #byline-inner-container > yt-formatted-string > a').text
+                'div#dismissable > div > div > ytd-video-meta-block > #metadata > #byline-container > ytd-channel-name > #container > #text-container > yt-formatted-string > a').text
             channel_url = 'https://www.youtube.com' + video.select_one(
-                'div#dismissable > div > div > ytd-video-meta-block > #metadata > #byline-container > #byline-inner-container > yt-formatted-string > a')[
-                'href']
+                'div#dismissable > div > div > ytd-video-meta-block > #metadata > #byline-container > ytd-channel-name > #container > #text-container > yt-formatted-string > a')['href']
 
             header = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36',
