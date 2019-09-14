@@ -201,12 +201,15 @@ class youtube_crawling:
         return video_html
 
     def __immutabilityvideoinformation(self, video_html):
-        upload_date = video_html.find('span', {'class': 'date style-scope ytd-video-secondary-info-renderer'}).text
-        y, m, d = upload_date.split(':')[1][:-1].split('.')
+        date_view = video_html.find('ytd-video-primary-info-renderer', {'class': 'style-scope ytd-watch-flexy'})
+        description = video_html.find('ytd-video-secondary-info-renderer', {'class': 'style-scope ytd-watch-flexy'})
+
+        upload_date = date_view.select_one('div#info > div#info-text > div#date > yt-formatted-string').text
+        y, m, d = upload_date.split(': ')[1][:-1].split('.')
         upload_date_format = dt.datetime.strptime(y.strip() + '-' + m.strip() + '-' + d.strip(), "%Y-%m-%d").date()
 
-        video_content_text = video_html.find('yt-formatted-string', {
-            'class': 'content style-scope ytd-video-secondary-info-renderer'}).text
+        video_content_text = description.select_one(
+            'div#container > ytd-expander > div#content > div#description').text
         video_content = self.__replace(video_content_text)
 
         find_category = video_html.find('div', {'id': 'collapsible'})
