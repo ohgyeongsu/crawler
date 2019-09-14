@@ -64,6 +64,8 @@ https://github.com/e9t/nsmc.git
 
 유튜브 키워드 기반 크롤링 검색 코드입니다.
 
+키워드 관련 동영상과 그 동영상에 대한 댓글을 가능한 수집합니다.
+
 selenium의 webdriver를 사용한 크롤링으로 크롬드라이버를 사용했습니다.
 
 병렬 크롤링을 하려했으나 트랙픽이 과도하게 들어가면 구글에서 reCAPTCHA이 작동해서 추가하지 않았습니다.
@@ -74,11 +76,15 @@ selenium의 webdriver를 사용한 크롤링으로 크롬드라이버를 사용�
 
 구현 환경은 위의 트위터 크롤러 환경과 같습니다.
 
+유튜브 api를 사용한 크롤링 코드는 youtube_api.py입니다. api를 사용하기 때문에 할당량 이상 요청하게되면 요청이 중단되어 오류가 발생합니다.
+
 # 사용방법
 
 ## 1. 사전작업
 
 이미 파이썬 환경이 있으시면 크롬드라이버와 crawl_youtube.py 파일을 같은 위치에 다운받으신 후 새로운 python파일에 아래 코드를 입력합니다.
+
+api를 사용해서 크롤링 하실려면 youtube_api.py의 파일을 다운받아서 KEY값을 개인 발급 KEY로 수정하세요
 
 ## 2. 코드
 
@@ -90,6 +96,17 @@ if __name__ == '__main__':
     test = crawl_youtube.youtube_crawling()
     #test.video_hard_information("크롤링할 키워드")
     test.video_hard_information("갤럭시 S9")
+    
+```
+
+```python
+
+import youtube_api
+
+if __name__ == '__main__':
+    test = youtube_api.youtube_crawling_api()
+    #test.crawling("크롤링할 키워드", 크롤링할 동영상 수)
+    test.crawling("갤럭시 S9", 30)
     
 ```
 
@@ -105,4 +122,10 @@ if __name__ == '__main__':
 
 실행하면 실행한 python파일과 같은 위치에 **키워드** 폴더가 생성되고 그 폴더안에 **동영상타이틀_video.json** 으로 json파일을 생성합니다.
 
+api를 사용해서 크롤링하는 방식은 키워드 관련 동영상 리스트와 댓글, 답글을 가능한 최대한 가져오는 방식이기때문에 10개 이상의 동영상을 수집하려면 많은 할당량이 들어가니 주의하시기 바랍니다.
+
 추후에 문제나 추가할 기능을 커밋하겠습니다.
+
+## 4. 참고
+
+https://developers.google.com/youtube/v3/?hl=ko
