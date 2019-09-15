@@ -5,33 +5,33 @@ class youtube_crawling_api:
     def __init__(self):
         self.KEY = "" #본인의 발급받은 key를 사용하세요
 
-    def crawling(self, word, videocount):
-        self.__videos_query(word, videocount)
+    def crawling(self, word, videocount, commentcount, replycount):
+        self.__videos_query(word, videocount, commentcount, replycount)
 
-    def __videos_query(self, searchword, videocount):
+    def __videos_query(self, searchword, videocount, commentcount, replycount):
         token = ""
         temp = []
-        while videocount > 0:
+        while True:
+            videocount_check = False
+
             if token == "":
                 videos_query = "https://www.googleapis.com/youtube/v3/search?part=id,snippet&maxResults=50&q=" + searchword + "&regionCode=KR&hl=ko_KR&type=video&key=" + self.KEY
             else:
                 videos_query = "https://www.googleapis.com/youtube/v3/search?part=id,snippet&maxResults=50&q=" + searchword + "&pageToken=" + token + "&regionCode=KR&hl=ko_KR&type=video&key=" + self.KEY
 
             videos_query_response = requests.get(videos_query).json()
-
             videos = videos_query_response["items"]
 
-            for video in videos:
+            for idx, video in enumerate(videos):
                 videoid = video["id"]["videoId"]
                 videourl = "https://www.youtube.com/watch?v=" + videoid
-                videoview, like, dislike, description, category, comments = self.__video_statistics(videoid)
+                videoview, like, dislike, description, category, comments = self.__video_statistics(videoid, commentcount, replycount)
                 title = video["snippet"]["title"]
                 timestamp = video["snippet"]["publishedAt"].split('.')[0]
                 channelid = video["snippet"]["channelId"]
                 channelurl = "https://www.youtube.com/channel/" + channelid
                 subscribecount = self.__channel_statisticses(channelid)
                 channeltitle = video["snippet"]["channelTitle"]
-
                 temp.extend([{
                     'title': title,
                     'view': videoview,
@@ -47,6 +47,13 @@ class youtube_crawling_api:
                     'comments': comments
                 }])
 
+                if idx+1 >= videocount:
+                    videocount_check = True
+                    break
+
+            if videocount_check == True:
+                break
+
             try:
                 token = videos_query_response["nextPageToken"]
                 videocount -= 1
@@ -57,7 +64,7 @@ class youtube_crawling_api:
             json.dump(temp, j, ensure_ascii=False, indent='\t')
 
 
-    def __video_statistics(self, videoid):
+    def __video_statistics(self, videoid, commentcount, replycommentcount):
         temp = []
         video_statistics_query = "https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=" + videoid + "&regionCode=KR&hl=ko_KR&key=" + self.KEY
         video_statistics_query_response = requests.get(video_statistics_query).json()
@@ -90,6 +97,9 @@ class youtube_crawling_api:
 
         comment_token = ""
         while True:
+            commentcount_check = False
+            replycommentcount_check = False
+
             if comment_token == "":
                 video_comments_query = "https://www.googleapis.com/youtube/v3/commentThreads?part=snippet%2Creplies&maxResults=100&order=time&textFormat=plainText&videoId=" + videoid + "&key=" + self.KEY
             else:
@@ -116,6 +126,7 @@ class youtube_crawling_api:
                         reply_comments_response = requests.get(reply_comments_query).json()
 
                         replies = reply_comments_response["items"]
+
                         replycomment = []
 
                         for reply in replies:
@@ -128,11 +139,18 @@ class youtube_crawling_api:
                                 'reply_comment': reply_text
                             }])
 
+                            if len(replycomment) >= replycommentcount:
+                                replycommentcount_check = True
+                                break
+
                         temp.extend([{
                             'comment_writer': commentauthor,
                             'comment': text,
                             'replies': replycomment
                         }])
+
+                        if replycommentcount_check == True:
+                            break
 
                         try:
                             reply_token = reply_comments_response["nextPageToken"]
@@ -143,7 +161,13 @@ class youtube_crawling_api:
                     temp.extend([{
                         'comment_writer': commentauthor,
                         'comment': text,
-                }])
+                    }])
+                    if len(temp) >= commentcount:
+                        commentcount_check = True
+                        break
+
+            if commentcount_check == True:
+                break
 
             try:
                 comment_token = video_comments_response["nextPageToken"]
