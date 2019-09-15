@@ -105,8 +105,8 @@ import youtube_api
 
 if __name__ == '__main__':
     test = youtube_api.youtube_crawling_api()
-    #test.crawling("크롤링할 키워드", 크롤링할 동영상 수)
-    test.crawling("갤럭시 S9", 30)
+    #test.crawling("크롤링할 키워드", 크롤링할 동영상 수, 하나의 동영상에서 크롤링할 댓글의 최대 개수, 하나의 댓글에서 크롤링할 답글의 최대수)
+    test.crawling("갤럭시 S9", 30, 100, 20)
     
 ```
 
