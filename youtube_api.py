@@ -5,185 +5,208 @@ class youtube_crawling_api:
     def __init__(self):
         self.KEY = "" #본인의 발급받은 key를 사용하세요
 
-    def crawling(self, word, videocount, commentcount, replycount):
-        self.__videos_query(word, videocount, commentcount, replycount)
+    def __request(self, query):
+        response = requests.get(query).json()
+        return response
 
-    def __videos_query(self, searchword, videocount, commentcount, replycount):
+    def __video_list(self, word, videocount):
         token = ""
-        temp = []
-        while True:
-            videocount_check = False
+        video_list = []
+        while videocount > 0:
+            video_list_query = "https://www.googleapis.com/youtube/v3/search?part=id,snippet&maxResults=50&q=" + word + "&pageToken=" + token + "&regionCode=KR&hl=ko_KR&type=video&key=" + self.KEY
+            video_list_response = self.__request(video_list_query)
 
-            if token == "":
-                videos_query = "https://www.googleapis.com/youtube/v3/search?part=id,snippet&maxResults=50&q=" + searchword + "&regionCode=KR&hl=ko_KR&type=video&key=" + self.KEY
+            if len(video_list_response["items"]) > videocount:
+                video_list.extend(video_list_response["items"][:videocount])
+                return video_list
+
+            elif len(video_list_response["items"]) == videocount:
+                video_list.extend(video_list_response["items"])
+                return video_list
+
             else:
-                videos_query = "https://www.googleapis.com/youtube/v3/search?part=id,snippet&maxResults=50&q=" + searchword + "&pageToken=" + token + "&regionCode=KR&hl=ko_KR&type=video&key=" + self.KEY
+                videocount -= len(video_list_response["items"])
+                video_list.extend(video_list_response["items"])
 
-            videos_query_response = requests.get(videos_query).json()
-            videos = videos_query_response["items"]
+                try:
+                    token = video_list_response["nextPageToken"]
+                except:
+                    return video_list
 
-            for idx, video in enumerate(videos):
-                videoid = video["id"]["videoId"]
-                videourl = "https://www.youtube.com/watch?v=" + videoid
-                videoview, like, dislike, description, category, comments = self.__video_statistics(videoid, commentcount, replycount)
-                title = video["snippet"]["title"]
-                timestamp = video["snippet"]["publishedAt"].split('.')[0]
-                channelid = video["snippet"]["channelId"]
-                channelurl = "https://www.youtube.com/channel/" + channelid
-                subscribecount = self.__channel_statisticses(channelid)
-                channeltitle = video["snippet"]["channelTitle"]
-                temp.extend([{
-                    'title': title,
-                    'view': videoview,
-                    'video_url': videourl,
-                    'channel_name': channeltitle,
-                    'channel_url': channelurl,
-                    'channel_subscribe_count': subscribecount,
-                    'uploade_date': timestamp,
-                    'video_description': description,
-                    'category': category,
-                    'like': like,
-                    'dislike': dislike,
-                    'comments': comments
+    def __video_details_information(self, video_id):
+        video_details_query = "https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=" + video_id + "&regionCode=KR&hl=ko_KR&key=" + self.KEY
+
+        video_details_response = self.__request(video_details_query)
+
+        for details_information in video_details_response["items"]:
+            description = details_information["snippet"]["description"]
+
+            category_id = details_information["snippet"]["categoryId"]
+            category = self.__video_category_information(category_id)
+
+            try:
+                view_count = details_information["statistics"]["viewCount"]
+            except:
+                view_count = 0
+
+            try:
+                like_count = details_information["statistics"]["likeCount"]
+            except:
+                like_count = 0
+
+            try:
+                dislike_count = details_information["statistics"]["dislikeCount"]
+            except:
+                dislike_count = 0
+
+            return description, category, view_count, like_count, dislike_count
+
+    def __video_category_information(self, category_id):
+        video_category_query = "https://www.googleapis.com/youtube/v3/videoCategories?part=snippet&id=" + category_id + "&hl=ko_KR&key=" + self.KEY
+
+        video_category_response = self.__request(video_category_query)
+
+        for category_information in video_category_response["items"]:
+            category = category_information["snippet"]["title"]
+            return category
+
+    def __video_comment(self, video_id, comment_count):
+        token = ""
+        comment_list = []
+        while comment_count > 0:
+            video_comment_query = "https://www.googleapis.com/youtube/v3/commentThreads?part=snippet%2Creplies&maxResults=100&order=time&textFormat=plainText&videoId=" + video_id + "&pageToken=" + token + "&key=" + self.KEY
+            video_comment_response = self.__request(video_comment_query)
+
+            if len(video_comment_response["items"]) > comment_count:
+                comment_list.extend(video_comment_response["items"][:comment_count])
+                return comment_list
+
+            elif len(video_comment_response["items"]) == comment_count:
+                comment_list.extend(video_comment_response["items"])
+                return comment_list
+
+            else:
+                comment_count -= len(video_comment_response["items"])
+                comment_list.extend(video_comment_response["items"])
+
+                try:
+                    token = video_comment_response["nextPageToken"]
+                except:
+                    return comment_list
+
+    def __comment_information(self, comment_list, reply_count):
+        comments = []
+        for comment in comment_list:
+            comment_author = comment["snippet"]["topLevelComment"]["snippet"]["authorDisplayName"]
+            text = comment["snippet"]["topLevelComment"]["snippet"]["textOriginal"]
+            timestamp = comment["snippet"]["topLevelComment"]["snippet"]["publishedAt"]
+            parent_id = comment["id"]
+
+            if comment["snippet"]["totalReplyCount"] > 0:
+                reply_comment_list = self.__reply_comment(parent_id, reply_count)
+                reply_comments = self.__reply_comment_information(reply_comment_list)
+                comments.extend([{
+                    'comment_writer': comment_author,
+                    'comment': text,
+                    'replies': reply_comments
                 }])
 
-                if idx+1 >= videocount:
-                    videocount_check = True
-                    break
-
-            if videocount_check == True:
-                break
-
-            try:
-                token = videos_query_response["nextPageToken"]
-                videocount -= 1
-            except:
-                break
-
-        with open('./videos.json', 'w', encoding='utf-8') as j:
-            json.dump(temp, j, ensure_ascii=False, indent='\t')
-
-
-    def __video_statistics(self, videoid, commentcount, replycommentcount):
-        temp = []
-        video_statistics_query = "https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=" + videoid + "&regionCode=KR&hl=ko_KR&key=" + self.KEY
-        video_statistics_query_response = requests.get(video_statistics_query).json()
-        video_statisticses = video_statistics_query_response["items"]
-
-        for video_statistics in video_statisticses:
-            description = video_statistics["snippet"]["description"]
-            categoryid = video_statistics["snippet"]["categoryId"]
-
-            video_category_query = "https://www.googleapis.com/youtube/v3/videoCategories?part=snippet&id=" + categoryid + "&hl=ko_KR&key=" + self.KEY
-            video_category_query_response = requests.get(video_category_query).json()
-            video_categories = video_category_query_response["items"]
-            for video_category in video_categories:
-                category = video_category["snippet"]["title"]
-
-            try:
-                videoview = video_statistics["statistics"]["viewCount"]
-            except:
-                videoview = 0
-
-            try:
-                like = video_statistics["statistics"]["likeCount"]
-            except:
-                like = 0
-
-            try:
-                dislike = video_statistics["statistics"]["dislikeCount"]
-            except:
-                dislike = 0
-
-        comment_token = ""
-        while True:
-            commentcount_check = False
-            replycommentcount_check = False
-
-            if comment_token == "":
-                video_comments_query = "https://www.googleapis.com/youtube/v3/commentThreads?part=snippet%2Creplies&maxResults=100&order=time&textFormat=plainText&videoId=" + videoid + "&key=" + self.KEY
             else:
-                video_comments_query = "https://www.googleapis.com/youtube/v3/commentThreads?part=snippet%2Creplies&maxResults=100&order=time&textFormat=plainText&videoId=" + videoid + "&pageToken=" + comment_token + "&key=" + self.KEY
+                comments.extend([{
+                    'comment_writer': comment_author,
+                    'comment': text,
+                }])
 
-            video_comments_response = requests.get(video_comments_query).json()
-            comments = video_comments_response["items"]
+        return comments
 
-            for comment in comments:
-                commentauthor = comment["snippet"]["topLevelComment"]["snippet"]["authorDisplayName"]
-                text = comment["snippet"]["topLevelComment"]["snippet"]["textOriginal"]
-                timestamp = comment["snippet"]["topLevelComment"]["snippet"]["publishedAt"]
-                parentid = comment["id"]
-                replycount = comment["snippet"]["totalReplyCount"]
+    def __reply_comment(self, parent_id, reply_count):
+        token = ""
+        reply_comment_list = []
+        while reply_count > 0:
+            reply_comment_query = "https://www.googleapis.com/youtube/v3/comments?part=id%2Csnippet&maxResults=100&parentId=" + parent_id + "&pageToken=" + token + "&key=" + self.KEY
+            reply_comment_response = self.__request(reply_comment_query)
 
-                if replycount > 0:
-                    reply_token = ""
-                    while True:
-                        if reply_token == "":
-                            reply_comments_query = "https://www.googleapis.com/youtube/v3/comments?part=id%2Csnippet&maxResults=100&parentId=" + parentid + "&key=" + self.KEY
-                        else:
-                            reply_comments_query = "https://www.googleapis.com/youtube/v3/comments?part=id%2Csnippet&maxResults=100&parentId=" + parentid + "&pageToken=" + comment_token + "&key=" + self.KEY
+            if len(reply_comment_response["items"]) > reply_count:
+                reply_comment_list.extend(reply_comment_response["items"][:reply_count])
+                return reply_comment_list
 
-                        reply_comments_response = requests.get(reply_comments_query).json()
+            elif len(reply_comment_response["items"]) == reply_count:
+                reply_comment_list.extend(reply_comment_response["items"])
+                return reply_comment_list
 
-                        replies = reply_comments_response["items"]
+            else:
+                reply_count -= len(reply_comment_response["items"])
+                reply_comment_list.extend(reply_comment_response["items"])
 
-                        replycomment = []
+                try:
+                    token = reply_comment_response["nextPageToken"]
+                except:
+                    return reply_comment_list
 
-                        for reply in replies:
-                            reply_commentauthor = reply["snippet"]["authorDisplayName"]
-                            reply_text = reply["snippet"]["textOriginal"]
-                            reply_timestamp = reply["snippet"]["publishedAt"]
+    def __reply_comment_information(self, reply_comment_list):
+        replies = []
+        for reply in reply_comment_list:
+            reply_comment_author = reply["snippet"]["authorDisplayName"]
+            reply_text = reply["snippet"]["textOriginal"]
+            reply_timestamp = reply["snippet"]["publishedAt"]
 
-                            replycomment.extend([{
-                                'reply_comment_writer': reply_commentauthor,
-                                'reply_comment': reply_text
-                            }])
+            replies.extend([{
+                'reply_comment_writer': reply_comment_author,
+                'reply_comment': reply_text
+            }])
 
-                            if len(replycomment) >= replycommentcount:
-                                replycommentcount_check = True
-                                break
+        return replies
 
-                        temp.extend([{
-                            'comment_writer': commentauthor,
-                            'comment': text,
-                            'replies': replycomment
-                        }])
+    def __channel_subscribe_information(self, channel_id):
+        channel_subscribe_query = "https://www.googleapis.com/youtube/v3/channels?part=statistics&id=" + channel_id + "&hl=ko_KR&key=" + self.KEY
 
-                        if replycommentcount_check == True:
-                            break
+        channel_subscribe_response = self.__request(channel_subscribe_query)
 
-                        try:
-                            reply_token = reply_comments_response["nextPageToken"]
-                        except:
-                            break
-
-                else:
-                    temp.extend([{
-                        'comment_writer': commentauthor,
-                        'comment': text,
-                    }])
-                    if len(temp) >= commentcount:
-                        commentcount_check = True
-                        break
-
-            if commentcount_check == True:
-                break
-
+        for subscribe_information in channel_subscribe_response["items"]:
             try:
-                comment_token = video_comments_response["nextPageToken"]
-            except:
-                break
-
-        return videoview, like, dislike, description, category, temp
-
-    def __channel_statisticses(self, channelid):
-        channel_statistics_query = "https://www.googleapis.com/youtube/v3/channels?part=statistics&id=" + channelid + "&hl=ko_KR&key=" + self.KEY
-        channel_statistics_query_response = requests.get(channel_statistics_query).json()
-        channel_statisticses = channel_statistics_query_response["items"]
-        for channel_statistics in channel_statisticses:
-            try:
-                subscribecount = channel_statistics["statistics"]["subscriberCount"]
+                subscribecount = subscribe_information["statistics"]["subscriberCount"]
             except:
                 subscribecount = 0
 
         return subscribecount
+
+    def __video_information(self, video_list, comment_count, reply_count):
+        temp = []
+
+        for video in video_list:
+            video_title = video["snippet"]["title"]
+            video_id = video["id"]["videoId"]
+            video_url = "https://www.youtube.com/watch?v=" + video_id
+            timestamp = video["snippet"]["publishedAt"].split('.')[0]
+
+            description, category, view_count, like_count, dislike_count = self.__video_details_information(video_id)
+
+            comment_list = self.__video_comment(video_id, comment_count)
+            comments = self.__comment_information(comment_list, reply_count)
+
+            channel_title = video["snippet"]["channelTitle"]
+            channel_id = video["snippet"]["channelId"]
+            channel_url = "https://www.youtube.com/channel/" + channel_id
+            channel_subscribe_count = self.__channel_subscribe_information(channel_id)
+
+            temp.extend([{
+                'title': video_title,
+                'view': view_count,
+                'video_url': video_url,
+                'channel_name': channel_title,
+                'channel_url': channel_url,
+                'channel_subscribe_count': channel_subscribe_count,
+                'uploade_date': timestamp,
+                'video_description': description,
+                'category': category,
+                'like': like_count,
+                'dislike': dislike_count,
+                'comments': comments
+            }])
+
+        with open('./videos.json', 'w', encoding='utf-8') as j:
+            json.dump(temp, j, ensure_ascii=False, indent='\t')
+
+    def crawling(self, word, videocount, commentcount, replycount):
+        video_list = self.__video_list(word, videocount)
+        self.__video_information(video_list, commentcount, replycount)
